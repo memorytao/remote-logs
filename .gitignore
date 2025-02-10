@@ -1,0 +1,6 @@
+*.tar
+
+*.csv
+
+*.temp
+__pycache__
