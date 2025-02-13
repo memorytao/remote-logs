@@ -1,6 +1,9 @@
 # Use the official Python image from the Docker Hub
 FROM --platform=$BUILDPLATFORM python:3.13.1-alpine
 
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 # Set the working directory in the container
 WORKDIR /app
 

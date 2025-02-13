@@ -1,22 +1,21 @@
-LOG_RESPONSE_PATH = "/opt/link/logs/trans_log/contact_history"
-LOG_CONTACT_PATH = "/opt/link/logs/trans_log/contact_history"
+
+HOST = "10.194.64.40"
+LOG_RESPONSE_PATH = "/opt/link/log/trans_log/response_history"
+LOG_CONTACT_PATH = "/opt/link/log/trans_log/contact_history"
 
 
 
 TRUE_SERVER = {
-"TRUE_AGW01":{"host":"192.168.1.135","port":8081},
-"TRUE_AGW02":{"host":"192.168.1.135","port":8082}
-# "TRUE_AGW03":"192.168.1.135",
-# "TRUE_AGW04":"192.168.1.135",
+"AGW01":{"host":HOST,"port":22, "user":"danateq", "password":"DTN@danateq202106"},
+"AGW02":{"host":HOST,"port":23,  "user":"danateq", "password":"DTN@danateq202106"}
+# "TRUE_AGW03":"localhost",
+# "TRUE_AGW04":"localhost",
 }
 
 
 DTAC_SERVER = {
-"DTAC_AGW01":{"host":"192.168.1.135","port":8083} ,
-"DTAC_AGW02":{"host":"192.168.1.135","port":8084},
-# "DTAC_AGW03":"192.168.1.135",
-# "DTAC_AGW04":"192.168.1.135"
+"AGW01":{"host":HOST,"port":22, "user":"danateq", "password":"DTN@danateq202106"} ,
+"AGW02":{"host":HOST,"port":22,  "user":"danateq", "password":"DTN@danateq202106"},
+# "DTAC_AGW03":"localhost",
+# "DTAC_AGW04":"localhost"
 }
-
-user_name = "danateq"
-password = "DTN@danateq202401"

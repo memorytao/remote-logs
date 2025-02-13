@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from pathlib import Path
 import SSHConnect
 import log_path
+from datetime import datetime
 
 app = Flask(__name__)
 
@@ -45,11 +46,98 @@ def home():
 #     return jsonify({'message': 'Item deleted'})
 
 
-@app.route('/apis/dtac/demo/<string:find_text>', methods=['GET'])
-def get_contact_dtac_log_all(find_text):
+@app.route('/apis/dtac/getResponseLog/demo/<string:find_text>', methods=['GET'])
+def get_all_reponse_dtac(find_text):
+
+    res = {
+        "response":[]
+    }
+
+    start_date = request.args.get('startDate')
+    status = request.args.get('status')
+    detail = request.args.get('find')
+
     cmd = f"cd {log_path.LOG_RESPONSE_PATH} ; grep {find_text} *.csv"
-    raw_data = SSHConnect.ssh_connect('192.168.1.135',log_path.user_name,log_path.password,command=cmd) # ip, username, password, port, command
-    res = parse_data_format(raw_data,None)
+    for machine,server in log_path.DTAC_SERVER.items():
+        response_data = {
+            "machine":'',
+            "data": None
+        }
+        raw_data = SSHConnect.ssh_connect(host=server.get('host'), username=server.get('user'),password=server.get('password'), port=server.get('port'),command=cmd)
+        
+        data = None
+        if start_date:
+            data = parse_data_format(raw_data,start_date)
+        else:
+            data = parse_data_format(raw_data,None)
+
+        if data:
+            response_data['data'] = data
+        response_data['machine'] = machine
+        res['response'].append(response_data)
+
+    return jsonify(res),200  
+
+
+@app.route('/apis/dtac/getContactLog/demo/<string:find_text>', methods=['GET'])
+def get_all_contact_dtac(find_text):
+
+    res = {
+        "response":[]
+    }
+
+    start_date = request.args.get('startDate')
+    status = request.args.get('status')
+    detail = request.args.get('find')
+
+    cmd = f"cd {log_path.LOG_CONTACT_PATH} ; grep {find_text} *.csv"
+    for machine,server in log_path.DTAC_SERVER.items():
+        response_data = {
+            "machine":'',
+            "data": None
+        }
+        raw_data = SSHConnect.ssh_connect(host=server.get('host'), username=server.get('user'),password=server.get('password'), port=server.get('port'),command=cmd)
+        
+        data = None
+        if start_date:
+            data = parse_data_format(raw_data,start_date)
+        else:
+            data = parse_data_format(raw_data,None)
+
+        if data:
+            response_data['data'] = data
+        response_data['machine'] = machine
+        res['response'].append(response_data)
+
+    return jsonify(res),200  
+
+
+@app.route('/apis/dtac/getResponseLog/demo', methods=['POST'])
+def get_resonse_by():
+    req = request.get_json()
+    find_text = req['wordsTofind']
+    date_find = req['sinceDate']
+    cmd = f"cd {log_path.LOG_RESPONSE_PATH} ; grep {find_text} *.csv"
+    res = {
+        "response":[]
+    }
+    for machine,server in log_path.DTAC_SERVER.items():
+        response_data = {
+            "machine":'',
+            "data": []
+        }
+        raw_data = SSHConnect.ssh_connect(host=server.get('host'), username=server.get('user'),password=server.get('password'), port=server.get('port'),command=cmd)
+        
+        if date_find:
+            found_data = parse_data_format(raw_data,date_find)
+            response_data['machine'] = machine
+            response_data['data'] = found_data
+            res['response'].append(response_data)
+        else:
+            response_data['machine'] = machine
+            response_data['data'] = found_data
+            res['response'].append(response_data)
+
     return jsonify(res),200  
 
 @app.route('/apis/dtac/getResponseLog/<string:find_text>', methods=['GET'])
@@ -77,17 +165,19 @@ def get_response_true_log(find_text):
     res = get_data('./logs/true_contact',find_text,None)
     return jsonify(res),200
 
-def parse_data_format(find_text, req):
-    res = {
-        "response": {
-            "machine": "DTAC_AGW01",
-            "data": []
-        }
-    }
-    raw_data = str(find_text).split('\n')
-    if raw_data:
-        for read_data in raw_data:
-            res['response']['data'].append(read_data)
+def parse_data_format(raw_data,since_date):
+    data = str(raw_data).split('\n')
+
+    if not since_date:
+        return data
+    else:
+        date_formate = change_date_format(since_date)
+        res = []
+        if data:
+            for read_data in data:
+                if date_formate in read_data:
+                    res.append(read_data)
+
     return res
 
 
@@ -116,6 +206,14 @@ def get_data(log_path,find_text,req):
                     data_found.append(data_log.replace('\n',''))
     return res
 
+
+def change_date_format(date_str):
+    # Convert string to datetime object
+    date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+    # Convert datetime object to new string format
+    new_date_str = date_obj.strftime('%m/%d/%Y')
+    
+    return new_date_str
 
 
 if __name__ == '__main__':
