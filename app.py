@@ -5,6 +5,7 @@ import log_path
 from datetime import datetime
 from flask_cors import CORS
 
+
 app = Flask(__name__)
 CORS(app)
 
@@ -12,168 +13,87 @@ CORS(app)
 def home():
     return "API's working!"
 
+def get_logs(server_dict, log_path, find_text, body):
 
-@app.route('/apis/dtac/getResponseLogs/<string:find_text>', methods=['GET'])
-def get_response_dtac(find_text):
+    # size = len( dict(body).items())
+    start_date = change_date_format(body.get('date'))
+    msisdn = body.get('msisdn')
+    package_code = body.get('packageCode')
+    status = body.get('status')
 
-    res = {
-        "response":[]
-    }
-
-    start_date = request.args.get('date')
-    status = request.args.get('status')
-    detail = request.args.get('find')
-
-    cmd = f"cd {log_path.LOG_RESPONSE_PATH} ; grep {find_text} *.csv"
-    for machine,server in log_path.DTAC_SERVER.items():
-        response_data = {
-            "machine":'',
-            "data": None
-        }
-        raw_data = SSHConnect.ssh_connect(host=server.get('host'), username=server.get('user'),password=server.get('password'), port=server.get('port'),command=cmd)
-        
-        data = None
-        if start_date:
-            data = parse_data_format(raw_data,start_date)
-        else:
-            data = parse_data_format(raw_data,None)
-
-        if data:
-            response_data['data'] = data
-        response_data['machine'] = machine
+    res = {"response": []}
+    cmd = f"cd {log_path} ; grep {find_text} *.csv"
+    for machine, server in server_dict.items():
+        response_data = {"machine": '', "data": []}
+        raw_data = SSHConnect.ssh_connect(
+            host=server.get('host'), 
+            username=server.get('user'),
+            password=server.get('password'), 
+            port=server.get('port'),
+            command=cmd
+        )
+        for data in raw_data.split('\n'):
+            if data:
+                 if ((not msisdn or msisdn in data) and
+                    (not package_code or package_code in data) and
+                    (not status or status in data) and
+                    (not start_date or start_date in data)):
+                    response_data['data'].append(data)
         res['response'].append(response_data)
-
-    return jsonify(res),200  
-
-
-@app.route('/apis/dtac/getContactLogs/<string:find_text>', methods=['GET'])
-def get_contact_dtac(find_text):
-
-    res = {
-        "response":[]
-    }
-
-    start_date = request.args.get('date')
-    status = request.args.get('status')
-    detail = request.args.get('find')
-
-    cmd = f"cd {log_path.LOG_CONTACT_PATH} ; grep {find_text} *.csv"
-    for machine,server in log_path.DTAC_SERVER.items():
-        response_data = {
-            "machine":'',
-            "data": None
-        }
-        raw_data = SSHConnect.ssh_connect(host=server.get('host'), username=server.get('user'),password=server.get('password'), port=server.get('port'),command=cmd)
-        
-        data = None
-        if start_date:
-            data = parse_data_format(raw_data,start_date)
-        else:
-            data = parse_data_format(raw_data,None)
-
-        if data:
-            response_data['data'] = data
         response_data['machine'] = machine
-        res['response'].append(response_data)
-
-    return jsonify(res),200  
-
-
-
-
-@app.route('/apis/true/getResponseLogs/<string:find_text>', methods=['GET'])
-def get_response_true(find_text):
-
-    res = {
-        "response":[]
-    }
-
-    start_date = request.args.get('date')
-    status = request.args.get('status')
-    detail = request.args.get('find')
-
-    cmd = f"cd {log_path.LOG_RESPONSE_PATH} ; grep {find_text} *.csv"
-    for machine,server in log_path.TRUE_SERVER.items():
-        response_data = {
-            "machine":'',
-            "data": None
-        }
-        raw_data = SSHConnect.ssh_connect(host=server.get('host'), username=server.get('user'),password=server.get('password'), port=server.get('port'),command=cmd)
-        
-        data = None
-        if start_date:
-            data = parse_data_format(raw_data,start_date)
-        else:
-            data = parse_data_format(raw_data,None)
-
-        if data:
-            response_data['data'] = data
-        response_data['machine'] = machine
-        res['response'].append(response_data)
-
-    return jsonify(res),200
-
-
-@app.route('/apis/true/getContactLogs/<string:find_text>', methods=['GET'])
-def get_contact_true(find_text):
-
-    res = {
-        "response":[]
-    }
-
-    start_date = request.args.get('date')
-    status = request.args.get('status')
-    detail = request.args.get('find')
-
-    cmd = f"cd {log_path.LOG_CONTACT_PATH} ; grep {find_text} *.csv"
-    for machine,server in log_path.TRUE_SERVER.items():
-        response_data = {
-            "machine":'',
-            "data": None
-        }
-        raw_data = SSHConnect.ssh_connect(host=server.get('host'), username=server.get('user'),password=server.get('password'), port=server.get('port'),command=cmd)
-        
-        data = None
-        if start_date:
-            data = parse_data_format(raw_data,start_date)
-        else:
-            data = parse_data_format(raw_data,None)
-
-        if data:
-            response_data['data'] = data
-        response_data['machine'] = machine
-        res['response'].append(response_data)
-
-    return jsonify(res),200  
-
-
-def parse_data_format(raw_data,since_date):
-    data = str(raw_data).split('\n')
-
-    if not since_date:
-        return data
-    else:
-        date_formate = change_date_format(since_date)
-        res = []
-        if data:
-            for read_data in data:
-                if date_formate in read_data:
-                    res.append(read_data)
-
     return res
-
 
 def change_date_format(date_str):
     try:
-        # Convert string to datetime object
         date_obj = datetime.strptime(date_str, '%Y-%m-%d')
-        # Convert datetime object to new string format
         new_date_str = date_obj.strftime('%m/%d/%Y')
-    except:
-        print("Error while parse format date")    
+    except Exception as e:
+        print(f"Error while parsing date format: {e}")
+        return None
     return new_date_str
+
+def get_what_to_find(obj):
+    
+    if obj.get('msisdn'):
+        return obj.get('msisdn')
+    elif obj.get('packageCode'):
+        return obj.get('packageCode')
+    elif obj.get('status'):
+        return obj.get('status')
+    elif obj.get('date'):
+        return change_date_format(obj.get('date'))
+    return
+
+@app.route('/apis/dtac/getResponseLog', methods=['POST'])
+def getResponseLogDTAC():
+    body = request.get_json()
+    first_to_find = get_what_to_find(body)
+    res = get_logs(log_path.DTAC_SERVER, log_path.LOG_RESPONSE_PATH,first_to_find,body)
+    return jsonify(res), 200
+
+@app.route('/apis/dtac/getContactLog', methods=['POST'])
+def getContactLogDTAC():
+    body = request.get_json()
+    first_to_find = get_what_to_find(body)
+    res = get_logs(log_path.DTAC_SERVER, log_path.LOG_CONTACT_PATH,first_to_find, body)
+    return jsonify(res), 200
+
+
+@app.route('/apis/true/getResponseLog', methods=['POST'])
+def getResponseLogTRUE():
+    body = request.get_json()
+  
+    first_to_find = get_what_to_find(body)
+    res = get_logs(log_path.TRUE_SERVER, log_path.LOG_RESPONSE_PATH, first_to_find, body)
+    return jsonify(res), 200
+
+@app.route('/apis/true/getContactLog', methods=['POST'])
+def getContactLogTRUE():
+    body = request.get_json()
+    first_to_find = get_what_to_find(body)
+    res = get_logs(log_path.TRUE_SERVER, log_path.LOG_CONTACT_PATH, first_to_find, body)
+    return jsonify(res), 200
 
 
 if __name__ == '__main__':
-    # app.run(host="0.0.0.0",debug=True)
     app.run()

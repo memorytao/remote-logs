@@ -1,9 +1,7 @@
 
-HOST = "192.168.1.135"
+HOST = "1.1.1.1"
 LOG_RESPONSE_PATH = "/opt/link/log/trans_log/response_history"
 LOG_CONTACT_PATH = "/opt/link/log/trans_log/contact_history"
-
-
 
 TRUE_SERVER = {
 "AGW01":{"host":HOST,"port":22, "user":"danateq", "password":"DTN@danateq202401"},

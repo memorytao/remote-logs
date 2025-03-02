@@ -1,1 +1,1 @@
-# remote-logs
+To get logs from server with remote
