@@ -15,9 +15,3 @@ def ssh_connect(host, username, password, port=22,command='ls'):
     finally:
         ssh.close()
     return res
-
-
-if __name__ == '__main__':
-    DTAC = log_path.DTAC_SERVER
-    cmd = "cd /opt/link/log/trans_log/response_history ; grep 66805155184 *.csv"
-    ssh_connect(DTAC['AGW01']['host'], DTAC['AGW01']['user'], DTAC['AGW01']['password'], DTAC['AGW01']['port'], cmd)
