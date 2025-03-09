@@ -22,7 +22,7 @@ def get_logs(server_dict, log_path, find_text, body):
     status = body.get('status')
 
     res = {"response": []}
-    cmd = f"cd {log_path} ; grep {find_text} *.csv"
+    cmd = f"cd {log_path} ; grep '{find_text}' *.csv | sort -k1,1r | head -n 1000 ;"
     for machine, server in server_dict.items():
         response_data = {"machine": '', "data": []}
         raw_data = SSHConnect.ssh_connect(
