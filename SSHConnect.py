@@ -1,5 +1,4 @@
 import paramiko
-import log_path
 
 def ssh_connect(host, username, password, port=22,command='ls'):
     try:
