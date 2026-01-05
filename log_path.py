@@ -1,5 +1,5 @@
 
-HOST = "1.1.1.1"
+HOST = "192.168.1.36"
 LOG_RESPONSE_PATH = "/opt/link/log/trans_log/response_history"
 LOG_CONTACT_PATH = "/opt/link/log/trans_log/contact_history"
 
