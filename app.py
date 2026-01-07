@@ -1,5 +1,4 @@
 from flask import Flask, request, jsonify
-import logging
 import SSHConnect
 import log_path
 from flask_cors import CORS
@@ -8,12 +7,7 @@ TRUE_SITE = "TRUE"
 DTAC_SITE = "DTAC"
 
 app = Flask(__name__)
-# Configure logging
-logging.basicConfig(
-    filename="api.log",
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-)
+
 CORS(app)
 
 
@@ -32,7 +26,7 @@ def get_logs(server_dict, log_path, find_text, body):
     res = {"response": []}
     sortBy = "sort -k1,1" if sort == "oldest" else "sort -k1,1r"
     cmd = f"cd {log_path} ; grep '{find_text}' *.csv | {sortBy} | head -n 1000 ;"
-    app.logger.info(f"execute command: {cmd}")
+    # app.logger.info(f"execute command: {cmd}")
     for machine, server in server_dict.items():
         response_data = {"machine": "", "data": []}
         raw_data = SSHConnect.ssh_connect(
@@ -73,7 +67,6 @@ def get_what_to_find(obj):
 @app.route("/apis/dtac/getResponseLog", methods=["POST"])
 def getResponseLogDTAC():
     body = request.get_json()
-    get_req_log(DTAC_SITE, body=body)
     first_to_find = get_what_to_find(body)
     res = get_logs(
         log_path.DTAC_SERVER, log_path.LOG_RESPONSE_PATH, first_to_find, body
@@ -84,7 +77,6 @@ def getResponseLogDTAC():
 @app.route("/apis/dtac/getContactLog", methods=["POST"])
 def getContactLogDTAC():
     body = request.get_json()
-    get_req_log(DTAC_SITE, body=body)
     first_to_find = get_what_to_find(body)
     res = get_logs(log_path.DTAC_SERVER, log_path.LOG_CONTACT_PATH, first_to_find, body)
     return jsonify(res), 200
@@ -93,7 +85,6 @@ def getContactLogDTAC():
 @app.route("/apis/true/getResponseLog", methods=["POST"])
 def getResponseLogTRUE():
     body = request.get_json()
-    get_req_log(TRUE_SITE, body=body)
     first_to_find = get_what_to_find(body)
     res = get_logs(
         log_path.TRUE_SERVER, log_path.LOG_RESPONSE_PATH, first_to_find, body
@@ -104,14 +95,9 @@ def getResponseLogTRUE():
 @app.route("/apis/true/getContactLog", methods=["POST"])
 def getContactLogTRUE():
     body = request.get_json()
-    get_req_log(TRUE_SITE, body=body)
     first_to_find = get_what_to_find(body)
     res = get_logs(log_path.TRUE_SERVER, log_path.LOG_CONTACT_PATH, first_to_find, body)
     return jsonify(res), 200
-
-
-def get_req_log(brand, body):
-    app.logger.info(f"Incoming request | Brand: {brand}, Body: {body}")
 
 
 def make_command(items):
@@ -119,13 +105,14 @@ def make_command(items):
     cmd = ""
     for item in items:
         try:
+            if item == "":
+                continue
             if cmd == "":
-                cmd = f" grep -E '{item.strip()}' *.csv"
+                cmd = f" grep -E '{item}' *.csv"
             else:
-                cmd += f" | grep -E '{item.strip()}'"
+                cmd += f" | grep -E '{item}'"
         except Exception as e:
             print(f"Error creating command: {e}")
-            logging.error(f"Error creating command: {e}")
     return cmd
 
 
@@ -139,18 +126,21 @@ def get_logs_server():
     log = body.get("log")
     params = body.get("value")
     start = body.get("start", 1)
-    end = body.get("end", 40)
+    end = body.get("end", 500)
 
-    # print("Received parameters:", brand, log, params, start, end)
-    logging.info(f"Received parameters: {brand}, {log}, {params}, {start}, {end}")
+    print(
+        f"Received parameters: brand={brand}, log={log}, value={params}, start={start}, end={end}"
+    )
 
     items = []
-    if params.find(";") != -1:
-        items.append(params.replace(";", "|"))
-    elif params.find(",") != -1:
-        items = params.split(",")
+    if params.find(",") != -1:
+        items = [item.strip() for item in params.split(",")]
+
+    elif params.find(";") != -1:
+        prepare = [item.strip() for item in params.split(";")]
+        items.append("|".join(prepare))
     else:
-        items.append(params)
+        items.append(params.strip())
 
     if brand not in [TRUE_SITE, DTAC_SITE]:
         return jsonify("Error: Invalid brand. Must be 'TRUE' or 'DTAC'."), 400
@@ -175,22 +165,24 @@ def get_logs_server():
         cmd = make_command(items)
         cmd = f"cd {dir_log} ; {cmd} | sed -n '{start},{end}p' ;"
         res_logs.append(get_logs_data(cmd, **server, machine=machine))
-    res["response"] = res_logs
 
+    res["response"] = res_logs
+    count_response = 0
     for machine_data in res["response"]:
-        count = 0
         for machine, data in machine_data.items():
             if data == "":
-                count += 1
-        if count == len(machine_data):
-            res["response"] = []
-            return jsonify(res), 200
+                count_response += 1
+
+    if count_response == len(res["response"]):
+        res["response"] = []
+        return jsonify(res), 200
 
     return jsonify(res), 200
 
 
 def get_logs_data(cmd, **kwargs):
 
+    app.logger.info(f"Executing command: {cmd} on machine: {kwargs.get('machine')}")
     res = SSHConnect.ssh_connect(
         host=kwargs.get("host"),
         username=kwargs.get("user"),
@@ -202,9 +194,10 @@ def get_logs_data(cmd, **kwargs):
 
     if isinstance(res, bytes):
         res = res.decode("utf-8")
+    # app.logger.info(f"Received data: {res} from machine: {kwargs.get('machine')}")
     return res
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=8888)
-    # app.run()
+    # app.run(debug=True, port=8889)
+    app.run()
